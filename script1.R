@@ -1,5 +1,5 @@
-# Dai Shizuka's networks tutorial: following along
-
+# Dai Shizuka's networks tutorial: following along.
+# The code is taken directly (in most cases) from https://dshizuka.github.io/networkanalysis/tutorials.html.
 
 # Part 1: Introduction to Networks ----------------------------------------
 library(igraph) # load the igraph package
