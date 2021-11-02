@@ -3,6 +3,7 @@
 
 # Part 1: Introduction to Networks ----------------------------------------
 library(igraph) # load the igraph package
+library(tidyverse) # KG loading to see whether it plays nicely with network data.
 
 g <- make_graph(~A-B-C-A, D-E-F-D, A-F) # won't use this function very often because usually we will be making graphs from data
 plot(g)
@@ -121,3 +122,72 @@ plot(g, layout = l)
 # let's examine the layout object
 class(l) # the layout is a matrix/array
 l # coordinates for where to put the nodes
+
+# force-directed algorithms
+# model the nodes as physical entities, e.g. springs, to figure out where they should be located. Minimizes crossovers and edge lengths. Note: can be computationally intensive, so best to use with caution for large networks.
+plot(g, layout = layout_with_fr(g)) # note that each time you run this code, it plots a slightly different layout.
+
+# If we want to get exactly the same graph each time, we have to set the seed.
+set.seed(2) # each seed will give a different network
+l <- layout_with_fr(g) 
+plot(g, layout = l)
+
+# There are many plotting methods. No single 'best' way. Here's an array of several plots, same graph, different methods.
+set.seed(10)
+layouts = c("layout_with_fr", "layout_with_kk", "layout_with_dh", "layout_with_gem", "layout_as_star", "layout_as_tree", "layout_in_circle", "layout_on_grid")
+par(mfrow = c(2,4), mar = c(1,1,1,1))
+for(layout in layouts){
+  l <- do.call(layout, list(g))
+  plot(g, layout = l, edge.color = "black", vertex.label = "", main = layout)
+}
+
+# and now clear the plots:
+dev.off()
+
+# Custom layouts:
+l <- matrix(c(1,2,3,4,5,6,7, 1,2,3,4,5,6,7), ncol = 2) # recall that in a layout matrix, the two columns are the literal x and y coordinates of each node. So in this case, we're going to lay out the nodes in a diagonal line: (1, 1), (2, 2), (3, 3), etc
+plot(g, layout = l, edge.curved = TRUE, vertex.label = "")
+# This seems annoyingly manual, but note that the ability to manually control layouts will be very useful when we want to plot spatial networks (since we can presumably pass in coordinates really easily.)
+
+# Vertex attributes
+# AKA node attributes. Stored typically in a separate file.
+attrib <- read.csv("https://dshizuka.github.io/networkanalysis/SampleData/sample_attrib.csv")
+attrib # cool, now we have sex and age associated with each of these individuals.
+
+# First have to assign the right attributes to the vertices
+V(g)$sex <- factor(attrib[match(V(g)$name, attrib$Name), "Sex"]) # factor() preserves data as M/F
+V(g)$age <- attrib[match(V(g)$name, attrib$Name), "Age"]
+g
+
+# Note to self: I think this could probably be done with tidyverse.
+# Okay, that prompted me to go off on a whole tangent. Turns out that tidygraph, developed by Thomas Lin Pedersen, is the Tidyverse's answer to igraph. It's built to work in tandem with igraph and play nicely with dplyr verbs and the rest of the tidyverse. Good to know that there is a way to remain siloed in my happy tidyverse bubble :)
+
+# Assign colors by sex
+V(g)$color <- c("gold","slateblue")[as.numeric(V(g)$sex)]
+
+# Make a plot
+set.seed(10)
+l <- layout_with_fr(g) #i.e. springs
+plot(g, layout = l,vertex.label = "", vertex.size = V(g)$age, 
+     edge.width = E(g)$weight, edge.color="black") # vertex size by age
+legend("topleft", legend = c("Female", "Male"), pch = 21, 
+       pt.bg = c("gold", "slateblue"))
+
+# Part 4: Measuring Networks (centrality and global measures) -------------
+# Centrality measures (e.g. node-level measures)
+# There are many possible centrality measures. Let's start with degree and strength.
+
+degree(g) # gets the degree for each node
+
+# Let's vary the node sizes in proportion to node degree
+set.seed(10)
+de <- igraph::degree(g)
+plot(g, vertex.label="", vertex.color="gold", edge.color="slateblue", vertex.size=de*2, edge.width=E(g)$weight*5)
+
+# ** note that the above example doesn't match what's shown in Dai's code. Is he maybe using a different network?
+
+# What about node strength? (relevant only in a weighted network). Strength = sum of the weight of the edges connected to the node.
+set.seed(10)
+st=graph.strength(g)
+plot(g,  vertex.label="", vertex.color="gold", edge.color="slateblue", edge.width=E(g)$weight*5, vertex.size=st*5) # now the nodes are proportional to their strength.
+
